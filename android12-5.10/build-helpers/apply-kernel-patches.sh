@@ -31,14 +31,14 @@ apply "$COMMON/file_struct_8bytes_align.patch"
 apply "$COMMON/reduce_cache_pressure.patch"
 apply "$COMMON/mem_opt_prefetch.patch"
 
-#if [ "$MAJOR" -ge 6 ]; then
-#  apply "$COMMON/optimise_memcmp.patch"
-#else
-#  sed -e 's/SYM_FUNC_START(__pi_memcmp)/SYM_FUNC_START_WEAK_PI(memcmp)/' \
-#      -e 's/SYM_FUNC_END(__pi_memcmp)/SYM_FUNC_END_PI(memcmp)/' \
-#      -e 's/SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)/EXPORT_SYMBOL_NOKASAN(memcmp)/' \
-#      "$COMMON/optimise_memcmp.patch" | patch -p1 -F3 --forward || true
-#fi
+if [ "$MAJOR" -ge 6 ]; then
+  apply "$COMMON/optimise_memcmp.patch"
+else
+  sed -e 's/SYM_FUNC_START(__pi_memcmp)/SYM_FUNC_START_WEAK_PI(memcmp)/' \
+      -e 's/SYM_FUNC_END(__pi_memcmp)/SYM_FUNC_END_PI(memcmp)/' \
+      -e 's/SYM_FUNC_ALIAS_WEAK(memcmp, __pi_memcmp)/EXPORT_SYMBOL_NOKASAN(memcmp)/' \
+      "$COMMON/optimise_memcmp.patch" | patch -p1 -F3 --forward || true
+fi
 
 apply "$COMMON/minimise_wakeup_time.patch"
 apply "$COMMON/int_sqrt.patch"
