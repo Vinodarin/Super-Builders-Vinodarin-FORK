@@ -407,20 +407,14 @@ jobs:
           echo "IDENTITY_STATUS=Applied ($DEVICE_CODENAME)"
         } >> "$GITHUB_ENV"
 
-    - name: Patch vm_flags for Kernel 5.10
+    - name: Patch vm_flags in mm/mmap.c for Kernel 5.10.226
       if: env.KERNEL_VER == '5.10' && env.SUBLEVEL == '226'
       working-directory: ${{ env.KERNEL_ROOT }}/common
       run: |
-        if ! grep -q "vm_flags_clear" include/linux/mm.h; then
-          echo "Injecting vm_flags compatibility helpers into include/linux/mm.h..."
-          sed -i '/#endif \/\* _LINUX_MM_H \*\//i \
-          static inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) {\
-              vma->vm_flags |= flags;\
-          }\
-          static inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) {\
-              vma->vm_flags &= ~flags;\
-          }\
-          ' include/linux/mm.h
+        if ! grep -q "vm_flags_clear" mm/mmap.c; then
+          echo "Injecting vm_flags helpers directly into mm/mmap.c..."
+          # Вставляем функции совместимости прямо в начале файла mm/mmap.c после инклюдов
+          sed -i '0,/#include/s//#include <linux\/mm.h>\n\nstatic inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\nstatic inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }\n\n#include/' mm/mmap.c
         fi
 
     - name: Build Kernel
