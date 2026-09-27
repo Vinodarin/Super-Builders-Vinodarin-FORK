@@ -470,7 +470,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.FILE_NAME }}-full-build-log
-        path: patch-rejects/../build-logs/kernel_build.log
+        path: build-logs/kernel_build.log
         if-no-files-found: ignore
         compression-level: 9
 
@@ -515,7 +515,7 @@ jobs:
 
     - name: Upload Rejects
       if: always() && env.REJ_COUNT > 0
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.FILE_NAME }}-Rejects
         path: patch-rejects/
