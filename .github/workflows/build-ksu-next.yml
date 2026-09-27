@@ -407,31 +407,35 @@ jobs:
           echo "IDENTITY_STATUS=Applied ($DEVICE_CODENAME)"
         } >> "$GITHUB_ENV"
 
-    - name: Patch vm_flags in mm/mmap.c for Kernel 5.10.226
+    - name: Patch vm_flags in include/linux/mm.h for Kernel 5.10.226
       if: env.KERNEL_VER == '5.10' && env.SUBLEVEL == '226'
       working-directory: ${{ env.KERNEL_ROOT }}/common
-      run: python3 -c '
-import re
-path = "mm/mmap.c"
-with open(path, "r", encoding="utf-8") as f:
-    content = f.read()
+      run: |
+        python3 - << 'EOF'
+        path = "include/linux/mm.h"
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
 
-helpers = "\nstatic inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\nstatic inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }\n"
+        helpers = """
+        #ifndef KSU_VM_FLAGS_PATCH_H
+        #define KSU_VM_FLAGS_PATCH_H
+        static inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) {
+            vma->vm_flags |= flags;
+        }
+        static inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) {
+            vma->vm_flags &= ~flags;
+        }
+        #endif
+        """
 
-if "vm_flags_clear" not in content:
-    # Ищем последний инклюд в файле, чтобы вставить функции сразу после них
-    includes = list(re.finditer(r"^#include\s+.*$", content, re.MULTILINE))
-    if includes:
-        last_include_end = includes[-1].end()
-        content = content[:last_include_end] + "\n" + helpers + content[last_include_end:]
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(content)
-        print("Successfully injected vm_flags helpers after includes.")
-    else:
-        print("Error: No includes found in mm/mmap.c")
-else:
-    print("vm_flags_clear already exists.")
-'
+        if "vm_flags_clear" not in content:
+            content += "\n" + helpers
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(content)
+            print("Successfully added vm_flags helpers to include/linux/mm.h")
+        else:
+            print("vm_flags helpers already exist in mm.h")
+        EOF
  
     - name: Build Kernel
       working-directory: ${{ env.KERNEL_ROOT }}
