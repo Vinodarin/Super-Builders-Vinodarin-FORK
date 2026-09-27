@@ -220,9 +220,21 @@ jobs:
       run: |
         PATCH="$GITHUB_WORKSPACE/$VERSION_DIR/KernelSU-Next/patches/70_ksu_safety-kernelsu-next-${KERNEL_VER}.patch"
         if [ -s "$PATCH" ]; then
-          patch -p1 --no-backup-if-mismatch < "$PATCH"
+          echo "Applying safety patch with fallback..."
+          patch -p1 --no-backup-if-mismatch < "$PATCH" || true
+          
+          # Проверяем, появились ли режекты, чтобы сохранить их для анализа
+          if find . -name "*.rej" | grep -q .; then
+            echo "REJ_COUNT=1" >> $GITHUB_ENV
+            mkdir -p "$GITHUB_WORKSPACE/patch-rejects"
+            find . -name "*.rej" -exec cp --parents {} "$GITHUB_WORKSPACE/patch-rejects/" \;
+            echo "Some hunks rejected. Saved to patch-rejects artifact."
+          else
+            echo "REJ_COUNT=0" >> $GITHUB_ENV
+          fi
         else
           echo "No 70_ patch needed"
+          echo "REJ_COUNT=0" >> $GITHUB_ENV
         fi
 
     - name: Apply ZeroMount Patch
