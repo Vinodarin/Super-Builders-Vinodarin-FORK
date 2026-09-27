@@ -175,16 +175,17 @@ jobs:
       env:
         SUKISU_COMMIT: ${{ inputs.sukisu_commit }}
       run: |
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
         [ -d "$KERNEL_ROOT/$KSU_DIR" ] || { echo "FATAL: $KSU_DIR not created by setup.sh"; exit 1; }
 
-        PIN="${SUKISU_COMMIT:-$(cat "$GITHUB_WORKSPACE/$VERSION_DIR/kernelsu-next-pin.txt" 2>/dev/null || true)}"
-        if [ -n "$PIN" ]; then
-          cd "$KERNEL_ROOT/$KSU_DIR"
-          git fetch origin
-          git checkout "$PIN"
-          echo "Pinned KernelSU-Next to $(git rev-parse --short=7 HEAD)"
-        fi
+        # Закомментировали жесткий пин, чтобы всегда собиралась актуальная версия из ветки next
+        # PIN="${SUKISU_COMMIT:-$(cat "$GITHUB_WORKSPACE/$VERSION_DIR/kernelsu-next-pin.txt" 2>/dev/null || true)}"
+        # if [ -n "$PIN" ]; then
+        #   cd "$KERNEL_ROOT/$KSU_DIR"
+        #   git fetch origin
+        #   git checkout "$PIN"
+        #   echo "Pinned KernelSU-Next to $(git rev-parse --short=7 HEAD)"
+        # fi
 
         cd "$KERNEL_ROOT/common"
 
@@ -194,7 +195,7 @@ jobs:
             sed -i '1a #include <linux/vmalloc.h>' "$SUPERCALLS"
           fi
         fi
-
+ 
     - name: Fix Old Kernel Compatibility
       working-directory: ${{ env.KERNEL_ROOT }}/common
       run: |
