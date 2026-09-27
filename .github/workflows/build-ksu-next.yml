@@ -413,8 +413,10 @@ jobs:
       run: |
         if ! grep -q "vm_flags_clear" mm/mmap.c; then
           echo "Injecting vm_flags helpers directly into mm/mmap.c..."
-          # Вставляем функции совместимости прямо в начале файла mm/mmap.c после инклюдов
-          sed -i '0,/#include/s//#include <linux\/mm.h>\n\nstatic inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\nstatic inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }\n\n#include/' mm/mmap.c
+          # Вставляем функции совместимости сразу после первого найденного инклюда
+          sed -i '/#include <linux\/mm.h>/a \
+          static inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\
+          static inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }' mm/mmap.c
         fi
 
     - name: Build Kernel
