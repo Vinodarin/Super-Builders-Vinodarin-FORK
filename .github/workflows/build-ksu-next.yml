@@ -410,7 +410,28 @@ jobs:
     - name: Patch vm_flags in mm/mmap.c for Kernel 5.10.226
       if: env.KERNEL_VER == '5.10' && env.SUBLEVEL == '226'
       working-directory: ${{ env.KERNEL_ROOT }}/common
-      run: python3 -c 'p="mm/mmap.c"; c=open(p,encoding="utf-8").read(); h="\nstatic inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\nstatic inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }\n"; (open(p,"w",encoding="utf-8").write(c[:c.find("\n",c.find("#include"))+1]+h+c[c.find("\n",c.find("#include"))+1:])) if "vm_flags_clear" not in c and c.find("#include")!=-1 else None'
+      run: python3 -c '
+import re
+path = "mm/mmap.c"
+with open(path, "r", encoding="utf-8") as f:
+    content = f.read()
+
+helpers = "\nstatic inline void vm_flags_set(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags |= flags; }\nstatic inline void vm_flags_clear(struct vm_area_struct *vma, vm_flags_t flags) { vma->vm_flags &= ~flags; }\n"
+
+if "vm_flags_clear" not in content:
+    # Ищем последний инклюд в файле, чтобы вставить функции сразу после них
+    includes = list(re.finditer(r"^#include\s+.*$", content, re.MULTILINE))
+    if includes:
+        last_include_end = includes[-1].end()
+        content = content[:last_include_end] + "\n" + helpers + content[last_include_end:]
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        print("Successfully injected vm_flags helpers after includes.")
+    else:
+        print("Error: No includes found in mm/mmap.c")
+else:
+    print("vm_flags_clear already exists.")
+'
  
     - name: Build Kernel
       working-directory: ${{ env.KERNEL_ROOT }}
